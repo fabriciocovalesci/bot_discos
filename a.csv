@@ -1,0 +1,4 @@
+"CPF";"facta_offline_saldo";"facta_offline_lib";"facta_offline_message";"facta_offline_finished_at";"facta_saldo";"facta_lib";"facta_message";"facta_finished_at"
+"22486220070";"Não Autorizado";"Não Autorizado";"CPF não autorizado";"2024-12-24T21:00:36.206Z";"";"";"Trabalhador informado não possui contas de FGTS.";"2024-12-24T21:00:36.206Z"
+"01369757476";"Autorizado";"Autorizado";"CPF autorizado";"2024-12-24T21:00:36.206Z";"";"";"O valor da operação (R$ 491,08) é menor do que o permitido para o produto: R$ 1.000,00";"2024-12-24T21:00:36.206Z"
+"01642756490";"Autorizado";"Autorizado";"CPF autorizado até 24/12/2024";"2024-12-24T21:00:36.206Z";"R$ 12.312,60";"R$ 11.300,77";"";"2024-12-24T21:00:36.206Z"
