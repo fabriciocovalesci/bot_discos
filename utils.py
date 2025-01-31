@@ -1,5 +1,6 @@
 
 from logger import logger
+from decouple import config
 import re
 import os
 import io
@@ -10,7 +11,6 @@ import json
 import pathlib
 from collections import namedtuple
 import locale
-from decouple import config
 from urllib.parse import urlparse
 import csv
 
@@ -20,10 +20,31 @@ locale.setlocale(locale.LC_ALL, 'pt_BR.utf8')
 Record = namedtuple('Record', ['cpf', 'email', 'phone', 'password'])
 
 
-def get_project_root():
-    logger.info(f"get_project_root: {os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}")
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# def get_project_root_():
+#     logger.info(f"get_project_root: {os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}")
+#     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
+def get_project_root() -> str:
+    """
+    Retorna o caminho da raiz do projeto.
+    """
+    root = os.path.dirname(os.path.abspath(__file__)) 
+    logger.info(f"get_project_root: {root} (utils.py:23)")
+    return root
+
+
+def get_specific_folder(folder_name: str) -> str:
+    """
+    Retorna o caminho de uma pasta específica dentro do projeto.
+    
+    :param folder_name: Nome da pasta específica.
+    :return: Caminho absoluto para a pasta.
+    """
+    project_root = get_project_root()
+    specific_folder = os.path.join(project_root, folder_name)
+    logger.info(f"Caminho da pasta '{folder_name}': {specific_folder}")
+    return specific_folder
 
 def full_path(path):
     logger.info(f"full_path: {os.path.join(get_project_root(), path)}")
@@ -173,20 +194,22 @@ def gravar_dados_csv(arquivo_csv, usuario):
 
 
 
-def read_file(file_path):
+def read_file_csv(csv_files, folder_path):
     """
     Reads the file and returns a list of tuples with the first and second values from each line.
     
     :param file_path: Path to the file relative to the project root.
     :return: List of tuples (first_value, second_value).
     """
-    data = []
-    with open(file_path, 'r') as file:
-        for line in file:
-            line = line.strip()
-            if line:
-                cpf, email, phone, password = line.split(',')
-                data.append(Record(cpf.strip(), email.strip(), phone.strip(), password.strip()))
-    return data
-
+    words = []
+    for file in csv_files:
+        file_path = os.path.join(folder_path, file)
+        
+        print(f"\n📄 Lendo arquivo: {file}")
+        
+        with open(file_path, newline='', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter='\n')
+            for row in reader:
+                words.append(row[0])
+    return words
 

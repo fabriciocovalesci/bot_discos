@@ -17,3 +17,37 @@ Nesses com muitas palavras, pretendo usar menos...
 Tipo:
 Marcos Valle previsão 
 Tuca Drácula
+
+
+
+*Ingestão de Arquivos e Dados de Clientes*
+Permitir o upload de arquivos em formato PDF para processamento e armazenamento.
+Suportar o recebimento de dados estruturados de clientes (ex.: nome, CPF, descrição, numero camera).
+Criar uma interface para envio de arquivos e dados. (verificar quem fará ajuste nessa tela)
+
+*API para Processamento de Dados*
+Extrair textos de PDFs e realizar pré-processamento dos dados.
+Associar os dados extraídos a clientes ou contextos específicos.
+Recuperação de dados do cliente
+
+*Criação de Embeddings*
+*Gerar embeddings para os dados processados usando modelos de aprendizado de máquina.*
+Armazenar embeddings em banco de dados vetorial.
+Atualizar embeddings sempre que os dados forem modificados.
+
+*Recuperação de Dados*
+Desenvolver consultas eficientes para buscar embeddings relevantes.
+Permitir que sejam inseridos as resposatas do operador durante o chamado
+Permitir extração de ralatórios
+
+*Desenvolvimento de Prompts*
+Criar prompts otimizados para o modelo de geração de respostas.
+Adaptar prompts dinamicamente com base nos dados recuperados e no histórico de interação.
+
+*Interface de Chat para Operadores*
+Desenvolver um chat no front-end para interação entre operadores e o sistema.
+Mostrar as respostas geradas pelo modelo junto com o contexto recuperado do cliente especifico.
+Implementar funcionalidades como:
+- Botões interativos no chat com temporizador programável para desaparecimento automático após um período definido ou quando acionados.
+- Permitir o operador inserir oque ocorreu durante o chamado
+

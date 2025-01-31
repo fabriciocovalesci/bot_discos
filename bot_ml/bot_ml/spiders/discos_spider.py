@@ -1,18 +1,13 @@
 from pathlib import Path
-
 import scrapy
 
 
-## PAEBIRU
-## RONNIE VON MISTERIOSA
-## AMADO MAITA
-
 class DiscosSpider(scrapy.Spider):
-    name = "bot"
+    name = "bot_ml"
 
-    def __init__(self, search_query=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(DiscosSpider, self).__init__(*args, **kwargs)
-        self.search_query = search_query
+        self.search_query = "Rubinho e Mauro Assumpção"
         self.start_urls_list_ml = "https://lista.mercadolivre.com.br"
         self.url_product = "https://produto.mercadolivre.com.br"
 
@@ -34,13 +29,14 @@ class DiscosSpider(scrapy.Spider):
             link = links[0] if links else None
 
             processed_link = self.process_link(link)
-            title_exists = processed_link.split(f"{self.base}/", 1)[1]
+            # title_exists = processed_link.split(f"{self.base}/", 1)[1]
 
             if processed_link:
                 yield {
                     'titulo': title.strip() if title else None,
                     'valor': price.strip() if f'R$ {price}' else None,
-                    'link': processed_link
+                    'link': processed_link,
+                    'termo': self.search_query.lower().replace(" ", "_")
                 }
 
         # pagination_links = response.xpath('//nav[@aria-label="Paginação"]//a/@href').getall()

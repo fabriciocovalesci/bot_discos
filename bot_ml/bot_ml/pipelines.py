@@ -2,6 +2,7 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, NamedStyle
 from datetime import datetime
+import re
 
 currency_style = NamedStyle(name="currency_BRL")
 currency_style.number_format = 'R$ #,##0.00'
@@ -9,21 +10,33 @@ currency_style.number_format = 'R$ #,##0.00'
 
 class BotMlPipeline:
     def __init__(self):
+        print("✅ Pipeline BotMlPipeline inicializada")
         self.results = []
-        self.date_file = datetime.now().strftime("%d/%m/%Y")
+        self.date_file = datetime.now().strftime("%d-%m-%Y")
 
     def process_item(self, item, spider):
+        print(f"📌 Item processado no pipeline: {item}")
         self.results.append(item)
         return item
 
     def close_spider(self, spider):
+        print("🛑 Pipeline encerrando... Salvando Excel!")
         df = pd.DataFrame(self.results)
+        termo = df.iloc[0]['termo'] if 'termo' in df.columns else ""
+        # Crie um título seguro para a planilha
+        safe_title = re.sub(r'[\\/?:*"[<>|]', '_', f"Resultados-{termo}-{self.date_file}")
+        
+        # Salve o DataFrame em um arquivo Excel
+        output_file = f"{safe_title}.xlsx"
+        df.to_excel(output_file, sheet_name=safe_title, index=False)
+        
+        spider.logger.info(f"Resultados salvos em {output_file}")
 
-        output_file = f"resultados-{self.date_file}.xlsx"
+        # output_file = f"resultados-{self.date_file}.xlsx"
 
         wb = Workbook()
         ws = wb.active
-        ws.title = f"Resultados-{self.date_file}"
+        ws.title = safe_title
 
         header_font = Font(bold=True, size=12)
         headers = [col.upper() for col in df.columns.tolist()] 
