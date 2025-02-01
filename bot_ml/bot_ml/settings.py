@@ -67,7 +67,7 @@ AUTOTHROTTLE_MAX_DELAY = 60
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   "bot_ml.pipelines.BotMlPipeline": 400,
+   "bot_ml.pipelines.BotMlPipeline": 200,
 }
 
 DOWNLOADER_MIDDLEWARES = {

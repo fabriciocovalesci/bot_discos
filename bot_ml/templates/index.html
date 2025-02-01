@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot de Discos - Controle</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-light">
+
+    <div class="container mt-5">
+        <h2 class="mb-4 text-center">🎶 Controle do Bot de Discos 🎶</h2>
+
+        <div class="card mb-4">
+            <div class="card-header">Executar Busca Manualmente</div>
+            <div class="card-body">
+                <input type="text" id="searchQuery" class="form-control" placeholder="Digite um termo para buscar...">
+                <button class="btn btn-primary mt-2" onclick="runSearch()">🔍 Buscar</button>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">📥 Palavras para busca no Mercado Livre</div>
+                    <div class="card-body">
+                        <ul id="inputList" class="list-group"></ul>
+                        <input type="text" id="newInput" class="form-control mt-2" placeholder="Adicionar novo termo">
+                        <button class="btn btn-success mt-2" onclick="addInput()">➕ Adicionar</button>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">🚫 Palavras Proibidas</div>
+                    <div class="card-body">
+                        <ul id="proibidosList" class="list-group"></ul>
+                        <input type="text" id="newProibido" class="form-control mt-2" placeholder="Adicionar termo proibido">
+                        <button class="btn btn-danger mt-2" onclick="addProibido()">➕ Adicionar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- <div class="card mb-4">
+            <div class="card-header">⏰ Configuração do Cron</div>
+            <div class="card-body">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#datetimeModal">Configurar Cron</button>
+            </div>
+        </div> -->
+    </div>
+
+    <div class="modal fade" id="datetimeModal" tabindex="-1" aria-labelledby="datetimeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="datetimeModalLabel">Escolha a Hora e Minutos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="timePicker">Selecione a Hora e Minutos:</label>
+                    <input type="text" id="timePicker" class="form-control" placeholder="Selecione a hora e minutos">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="setCronJob()">Definir Cron</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+
+
+        async function loadData() {
+            const inputRes = await axios.get('/input');
+            document.getElementById("inputList").innerHTML = inputRes.data.input.map(item =>
+                `<li class="list-group-item d-flex justify-content-between">${item} 
+                    <button class="btn btn-sm btn-danger" onclick="removeInput('${item}')">❌</button>
+                </li>`
+            ).join('');
+
+            const proibidosRes = await axios.get('/proibidos');
+            const proibidosList = document.getElementById("proibidosList");
+            proibidosList.innerHTML = "";
+
+            proibidosRes.data.proibidos.forEach(item => {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex justify-content-between align-items-center";
+
+                const span = document.createElement("span");
+                span.textContent = item;
+
+                const btn = document.createElement("button");
+                btn.className = "btn btn-sm btn-danger";
+                btn.innerHTML = "❌";
+                btn.onclick = () => removeProibido(item);
+
+                li.appendChild(span);
+                li.appendChild(btn);
+                proibidosList.appendChild(li);
+            });
+        }
+
+        async function runSearch() {
+            const query = document.getElementById("searchQuery").value;
+            if (!query) return alert("Digite um termo para buscar!");
+            await axios.post('/run', { query });
+            alert(`Busca iniciada para "${query}"!`);
+        }
+
+        async function addInput() {
+            const name = document.getElementById("newInput").value;
+            if (!name) return;
+            await axios.post('/input', { name });
+            loadData();
+            document.getElementById("newInput").value = ""
+            
+        }
+
+        async function removeInput(name) {
+            await axios.delete('/input', { data: { name } });
+            loadData();
+            document.getElementById("newProibido").value = "";
+        }
+
+        async function addProibido() {
+            const input = document.getElementById("newProibido").value;
+            if (!input) return;
+            await axios.post('/proibidos', { name: input });
+            loadData();
+            document.getElementById("newProibido").value = "";
+        }
+
+        async function removeProibido(name) {
+            await axios.delete('/proibidos', { data: { name } });
+            loadData();
+        }
+
+        async function setCronJob() {
+            const date = document.getElementById("datePicker").value;
+            const interval = document.getElementById("interval").value;
+            if (!date || !interval) return alert("Selecione a data/hora e o intervalo!");
+
+            // Enviar os dados para o backend para configurar o cron
+            await axios.post('/set-cron', { date, interval });
+            alert("Cron configurado com sucesso!");
+        }
+
+        async function setCronJob() {
+            const time = document.getElementById("timePicker").value;
+            if (!time) return alert("Selecione a hora e minutos!");
+
+            // Enviar os dados para o backend para configurar o cron
+            await axios.post('/set-cron', { time });
+            alert("Cron configurado com sucesso!");
+            // Fechar o modal após definir o cron
+            const modal = bootstrap.Modal.getInstance(document.getElementById('datetimeModal'));
+            modal.hide();
+        }
+
+        loadData();
+    </script>
+
+</body>
+</html> 

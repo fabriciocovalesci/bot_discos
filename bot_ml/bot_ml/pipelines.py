@@ -1,50 +1,69 @@
+import os
+import re
 import pandas as pd
+from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, NamedStyle
-from datetime import datetime
-import re
-
-currency_style = NamedStyle(name="currency_BRL")
-currency_style.number_format = 'R$ #,##0.00'
+from utils import get_project_root, send_email
 
 
 class BotMlPipeline:
     def __init__(self):
         print("✅ Pipeline BotMlPipeline inicializada")
-        self.results = []
-        self.date_file = datetime.now().strftime("%d-%m-%Y")
+        self.date_file = datetime.now().strftime("%d-%m-%Y_%H-%M")
+        self.output_path = "output/"
 
-    def process_item(self, item, spider):
-        print(f"📌 Item processado no pipeline: {item}")
-        self.results.append(item)
-        return item
+    def get_latest_csv(self):
+        """Encontra o arquivo CSV mais recente na pasta output/"""
+        pattern = re.compile(r"resultados_(\d{2}-\d{2}-\d{4})_(\d{2}-\d{2})\.csv")
+        files = []
+
+        for filename in os.listdir(self.output_path):
+            match = pattern.match(filename)
+            if match:
+                date_str, time_str = match.groups()
+                full_datetime = datetime.strptime(f"{date_str} {time_str}", "%d-%m-%Y %H-%M")
+                files.append((full_datetime, filename))
+
+        if files:
+            files.sort(reverse=True)  
+            return os.path.join(self.output_path, files[0][1])
+        return None
 
     def close_spider(self, spider):
         print("🛑 Pipeline encerrando... Salvando Excel!")
-        df = pd.DataFrame(self.results)
-        termo = df.iloc[0]['termo'] if 'termo' in df.columns else ""
-        # Crie um título seguro para a planilha
-        safe_title = re.sub(r'[\\/?:*"[<>|]', '_', f"Resultados-{termo}-{self.date_file}")
-        
-        # Salve o DataFrame em um arquivo Excel
-        output_file = f"{safe_title}.xlsx"
-        df.to_excel(output_file, sheet_name=safe_title, index=False)
-        
-        spider.logger.info(f"Resultados salvos em {output_file}")
 
-        # output_file = f"resultados-{self.date_file}.xlsx"
+        latest_csv = self.get_latest_csv()
+        if not latest_csv:
+            print("⚠️ Nenhum arquivo CSV encontrado. Encerrando pipeline.")
+            return
+
+        print(f"📂 Último arquivo CSV encontrado: {latest_csv}")
+        df = pd.read_csv(latest_csv)
+
+        termo = df.iloc[0]['termo'] if 'termo' in df.columns else "resultados"
+        safe_title = re.sub(r'[\\/?:*"[<>|]', '_', f"Resultados-{self.date_file}")
+
+        output_file = f"{safe_title}.xlsx"
 
         wb = Workbook()
         ws = wb.active
         ws.title = safe_title
 
+
+        currency_style = NamedStyle(name="currency_BRL")
+        currency_style.number_format = 'R$ #,##0.00'
+
+
         header_font = Font(bold=True, size=12)
-        headers = [col.upper() for col in df.columns.tolist()] 
+        headers = [col.upper() for col in df.columns.tolist()]
         ws.append(headers)
+
         for col_num, header in enumerate(headers, start=1):
             cell = ws.cell(row=1, column=col_num)
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center")
+
 
         for _, row in df.iterrows():
             current_row = ws.max_row + 1
@@ -55,15 +74,13 @@ class BotMlPipeline:
                     cell.hyperlink = value
                     cell.font = Font(color="0000FF", underline="single")
                 elif col_name == 'valor' and pd.notna(value):
-                    cell.value = float(value)
+                    cleaned_value = re.sub(r"[^\d.]", "", str(value)) 
+                    cell.value = float(cleaned_value)
                     cell.style = currency_style
                 else:
                     cell.value = value
-
-        # Ajusta a largura das colunas automaticamente
-        # for col in ws.columns:
-        #     max_length = max(len(str(cell.value) if cell.value else "") for cell in col)
-        #     ws.column_dimensions[col[0].column_letter].width = max_length + 2
-
-        wb.save(output_file)
-        print(f"Arquivo Excel salvo em: {output_file}")
+        path_save_file = os.path.join(get_project_root(), "exel", output_file)
+        wb.save(path_save_file)
+        send_email(output_file, path_save_file)
+        print(f"✅ Arquivo Excel salvo em: {path_save_file}")
+        print(f"Resultados salvos em {path_save_file}")
