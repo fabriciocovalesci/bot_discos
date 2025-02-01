@@ -45,6 +45,15 @@
                 </div>
             </div>
         </div>
+
+        <div class="card mb-4">
+            <div class="card-header">📂 Resultados de Busca</div>
+            <div class="card-body">
+                <ul id="resultadosList" class="list-group">
+                    <!-- Aqui os arquivos serão inseridos via JavaScript -->
+                </ul>
+            </div>
+        </div>
         
         <!-- <div class="card mb-4">
             <div class="card-header">⏰ Configuração do Cron</div>
@@ -78,6 +87,44 @@
 
 
         async function loadData() {
+             // Fazendo a requisição para obter os resultados
+        const resultados = await axios.get('/resultados');
+        
+        // Selecionando o elemento onde os resultados serão listados
+        const resultadosList = document.getElementById("resultadosList");
+        
+        // Limpa a lista existente para evitar duplicação
+        resultadosList.innerHTML = "";
+        
+        // Verifica se a resposta contém dados
+        if (resultados.data && resultados.data.resultados) {
+            // Para cada arquivo, cria um item de lista
+            resultados.data.resultados.forEach(file => {
+                const li = document.createElement("li");
+                li.className = "list-group-item d-flex justify-content-between align-items-center";
+                
+                // Criando o texto do item de lista
+                const span = document.createElement("span");
+                span.textContent = file;
+
+                // Criando o botão de download
+                const downloadBtn = document.createElement("button");
+                downloadBtn.className = "btn btn-sm btn-primary";
+                downloadBtn.textContent = "📥 Baixar";
+                downloadBtn.onclick = () => downloadFile(file); // Chamando a função de download
+                
+                // Adicionando os elementos ao item de lista
+                li.appendChild(span);
+                li.appendChild(downloadBtn);
+                
+                // Adicionando o item à lista
+                resultadosList.appendChild(li);
+            });
+        } else {
+            resultadosList.innerHTML = "<li class='list-group-item'>Nenhum resultado encontrado</li>";
+        }
+
+
             const inputRes = await axios.get('/input');
             document.getElementById("inputList").innerHTML = inputRes.data.input.map(item =>
                 `<li class="list-group-item d-flex justify-content-between">${item} 
@@ -106,6 +153,12 @@
                 proibidosList.appendChild(li);
             });
         }
+
+        function downloadFile(file) {
+            // Redireciona para a rota de download do Flask
+            window.location.href = `/download/${file}`;
+        }
+
 
         async function runSearch() {
             const query = document.getElementById("searchQuery").value;

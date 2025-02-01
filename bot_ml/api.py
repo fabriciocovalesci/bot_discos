@@ -1,6 +1,7 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import os
 import csv
+import glob
 from main import run_spider
 from utils import get_project_root
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -56,6 +57,22 @@ def manage_input():
                     file.write(line)
 
         return jsonify({"message": f"'{name}' removido do input.csv"}), 200
+    
+
+@app.route('/resultados', methods=['GET'])
+def manage_resultados():
+    folder_path = os.path.join(get_project_root(), "exel")
+    xlsx_files = glob.glob(os.path.join(folder_path, "*.xlsx"))
+    filenames = [os.path.basename(file) for file in xlsx_files]
+    return jsonify({"resultados": filenames})
+
+
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    folder_path = os.path.join(get_project_root(), "exel")
+    return send_from_directory(folder_path, filename, as_attachment=True)
+
+    
 
 @app.route('/proibidos', methods=['GET', 'POST', 'DELETE'])
 def manage_proibidos():
