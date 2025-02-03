@@ -15,8 +15,8 @@ def send_email(file_name, file_path):
 
     recipients = [
         {
-            "name": "Fabricio",
-            "email": "fabcovalesci@gmail.com",
+            "name": "Ailton",
+            "email": "ailton.staniasky@gmail.com",
         }
     ]
 
