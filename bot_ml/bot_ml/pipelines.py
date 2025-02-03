@@ -75,7 +75,7 @@ class BotMlPipeline:
                     cell.font = Font(color="0000FF", underline="single")
                 elif col_name == 'valor' and pd.notna(value):
                     cleaned_value = re.sub(r"[^\d.]", "", str(value)) 
-                    cell.value = float(cleaned_value)
+                    cell.value = cleaned_value
                     cell.style = currency_style
                 else:
                     cell.value = value
@@ -84,3 +84,9 @@ class BotMlPipeline:
         send_email(output_file, path_save_file)
         print(f"✅ Arquivo Excel salvo em: {path_save_file}")
         print(f"Resultados salvos em {path_save_file}")
+        path_output_files = os.path.join(get_project_root(), "output")
+        for filename in os.listdir(path_output_files):
+            file_path = os.path.join(path_output_files, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"Arquivo {filename} deletado.")

@@ -8,6 +8,7 @@ from scrapy.utils.project import get_project_settings
 from scrapy.utils.log import configure_logging
 from twisted.internet import reactor
 from datetime import datetime
+from apscheduler.schedulers.blocking import BlockingScheduler
 import os
 
 class CrawlerRunnerProcess(Process):
@@ -34,18 +35,17 @@ class CrawlerRunnerProcess(Process):
 
 def run_spider(search_query):
     try:
+        print("++++++++++++++++++++++++++ ", search_query)
         crawler = CrawlerRunnerProcess(DiscosSpider, search_query)
         crawler.start()
         # crawler.join()
-        return crawler 
+        return crawler
     except KeyboardInterrupt as err:
         print(f"Parou {err}")
         os._exit()
 
 def job_function():
     print(datetime.now().time().strftime('%H:%M'))
-
-if __name__ == '__main__':
     os.environ['TZ'] = 'America/Sao_Paulo'
     configure_logging()
 
@@ -76,3 +76,16 @@ if __name__ == '__main__':
         print("⚠ Nenhum CSV encontrado para conversão.")
 
     print("✅ Processo finalizado!")
+
+if __name__ == '__main__':
+    os.environ['TZ'] = 'America/Sao_Paulo'    
+    configure_logging()
+    scheduler = BlockingScheduler(timezone="America/Sao_Paulo")
+    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat',  hour='16-17', minute='5,15,25,35,45,55', timezone="America/Sao_Paulo")
+    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat', hour='21-23,0', minute='5,15,25,35,45,55', timezone="America/Sao_Paulo")
+    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat', hour='21-23,0', minute='*', timezone="America/Sao_Paulo")
+    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat', hour=23, minute=47, timezone="America/Sao_Paulo")
+    scheduler.add_job(job_function, 'cron', hour=23, minute=49, timezone="America/Sao_Paulo")
+
+
+    scheduler.start()

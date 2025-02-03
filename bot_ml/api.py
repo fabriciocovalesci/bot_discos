@@ -1,18 +1,85 @@
 from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, render_template, redirect, url_for, request, session, flash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from datetime import timedelta
+import csv
+import os
 import os
 import csv
 import glob
-from main import run_spider
+import threading
+from main import run_spider, job_function
 from utils import get_project_root
-from apscheduler.schedulers.background import BackgroundScheduler
+from scrapy.utils.log import configure_logging
+from apscheduler.schedulers.background import BackgroundScheduler 
 
 app = Flask(__name__,  template_folder="templates")
-scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
-scheduler.start()
+app.secret_key = 'sua_chave_secreta_aqui'  
 
 resource_path = os.path.join(get_project_root(), "resource")
+cron_file = os.path.join(get_project_root(), "cron.csv")
+user_file = os.path.join(get_project_root(), "user.csv")
+scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
+
+
+app.permanent_session_lifetime = timedelta(hours=24)
+
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+
+def check_user(username, password):
+    with open(user_file, 'r') as file:
+        reader = csv.reader(file)
+        # next(reader)
+        for row in reader:
+            if row[0] == username and row[1] == password:
+                return True
+    return False
+
+
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(user_id)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        if check_user(username, password):
+            user = User(username)
+            login_user(user)
+            session.permanent = True  
+            return redirect(url_for('home'))
+        else:
+            flash('Usuário ou senha incorretos!', 'danger')
+    
+    return render_template('login.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 
 @app.route('/')
+@login_required
 def home():
     return render_template("index.html")
 
@@ -27,6 +94,7 @@ def run():
     
     run_spider(search_query)
     return jsonify({"message": f"Busca iniciada para '{search_query}'"}), 200
+
 
 @app.route('/input', methods=['GET', 'POST', 'DELETE'])
 def manage_input():
@@ -104,18 +172,67 @@ def manage_proibidos():
     
 
 
-@app.route('/set-cron', methods=['POST'])
+@app.route('/set-cron', methods=['GET', 'POST'])
 def set_cron():
-    data = request.json
-    date = data.get('date')
-    interval = data.get('interval')
+    if request.method == 'GET':
+        with open(cron_file, 'r', encoding='utf-8') as file:
+            data = file.read().splitlines()
+        return jsonify({"cron": data})
+
+    if request.method == 'POST':
+        data = request.json
+        cron_time = data.get("time", None)
+
+        if cron_time:
+            with open(cron_file, 'w', encoding='utf-8') as file:
+                file.write(cron_time + "\n")
+
+            scheduler.remove_all_jobs()
+
+            hour, minute = cron_time.split(":")
+           
+            if hour == "*":
+                scheduler.add_job(job_function, 'cron', minute=f"*/{minute}", timezone="America/Sao_Paulo")
+            else:
+                scheduler.add_job(job_function, 'cron', hour=hour, minute=minute, timezone="America/Sao_Paulo")
+
+            return jsonify({"message": f"Cron configurado para {cron_time}"}), 201
+
+    return jsonify({"message": "Falha na configuração do cron."}), 400
+
+
+
+
+def initialize_cron():
+    if not os.path.exists(cron_file):
+        with open(cron_file, 'w', encoding='utf-8') as file:
+            file.write('*:25\n')
     
-    # Lógica para configurar o cron, por exemplo:
-    # cron_expr = f"{minute} {hour} * * *"
-    # Você pode configurar o cron com a data e o intervalo aqui
+    with open(cron_file, 'r', encoding='utf-8') as file:
+        cron_time = file.read().strip()
     
-    return jsonify({"message": "Cron configurado com sucesso!"}), 200
+    if cron_time:
+        scheduler.remove_all_jobs()
+        hour, minute = cron_time.split(":")
+        if hour == "*":
+            print("horas ", hour, minute)
+            scheduler.add_job(job_function, 'cron', minute=f"*/{minute}", timezone="America/Sao_Paulo")
+        else:
+            scheduler.add_job(job_function, 'cron', hour=hour, minute=minute, timezone="America/Sao_Paulo")
+
+def start_scheduler():
+    if not scheduler.running:
+        scheduler.start()
 
 
 if __name__ == '__main__':
+    os.environ['TZ'] = 'America/Sao_Paulo'    
+    configure_logging()
+    initialize_cron()
+
+    if not scheduler.running:
+        scheduler.start()
+    
+    # scheduler_thread = threading.Thread(target=start_scheduler)
+    # scheduler_thread.start()
     app.run(debug=True, host="0.0.0.0", port=5000)

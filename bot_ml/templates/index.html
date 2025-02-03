@@ -6,17 +6,34 @@
     <title>Bot de Discos - Controle</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
 </head>
 <body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="btn btn-danger" href="/logout">Sair</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
     <div class="container mt-5">
         <h2 class="mb-4 text-center">🎶 Controle do Bot de Discos 🎶</h2>
 
+
         <div class="card mb-4">
-            <div class="card-header">Executar Busca Manualmente</div>
+            <div class="card-header">⏰ Configuração do Cron</div>
             <div class="card-body">
-                <input type="text" id="searchQuery" class="form-control" placeholder="Digite um termo para buscar...">
-                <button class="btn btn-primary mt-2" onclick="runSearch()">🔍 Buscar</button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#datetimeModal">Configurar Cron</button>
+                <p id="cronMessage" class="mt-3"></p> 
             </div>
         </div>
 
@@ -50,33 +67,50 @@
             <div class="card-header">📂 Resultados de Busca</div>
             <div class="card-body">
                 <ul id="resultadosList" class="list-group">
-                    <!-- Aqui os arquivos serão inseridos via JavaScript -->
                 </ul>
             </div>
         </div>
         
-        <!-- <div class="card mb-4">
-            <div class="card-header">⏰ Configuração do Cron</div>
-            <div class="card-body">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#datetimeModal">Configurar Cron</button>
-            </div>
-        </div> -->
     </div>
 
-    <div class="modal fade" id="datetimeModal" tabindex="-1" aria-labelledby="datetimeModalLabel" aria-hidden="true">
+
+    <div class="modal fade" id="datetimeModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="datetimeModalLabel">Escolha a Hora e Minutos</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    <h5 class="modal-title" id="modalLabel">Configurar Horário do Cron</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <label for="timePicker">Selecione a Hora e Minutos:</label>
-                    <input type="text" id="timePicker" class="form-control" placeholder="Selecione a hora e minutos">
+                    <label for="cronHour">Selecione a hora:</label>
+                    <select id="cronHour" class="form-select mb-3">
+                        <option value="*">Todos</option>
+                        <script>
+                            for (let h = 0; h < 24; h++) {
+                                let hour = h.toString().padStart(2, '0');
+                                document.write(`<option value="${hour}">${hour}:00</option>`);
+                            }
+                        </script>
+                    </select>
+    
+                    <label>Selecione os minutos:</label>
+                    <div class="d-flex flex-wrap gap-2" id="minuteContainer">
+                        <button type="button" class="btn btn-outline-danger minute-btn" data-minute="*">Todos</button>
+                        <script>
+                            for (let m = 5; m < 60; m += 5) {  // Inicia a partir de 5 minutos
+                                let minute = m.toString().padStart(2, '0');
+                                document.write(`
+                                    <button type="button" class="btn btn-outline-primary minute-btn" data-minute="${minute}">
+                                        ${minute} min
+                                    </button>
+                                `);
+                            }
+                        </script>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="setCronJob()">Definir Cron</button>
+                    <button type="button" class="btn btn-success" onclick="setCronJob()" id="saveCron">Salvar</button>
                 </div>
             </div>
         </div>
@@ -85,39 +119,39 @@
 
     <script>
 
-
         async function loadData() {
-             // Fazendo a requisição para obter os resultados
+
+        const cron = await axios.get('/set-cron');
+        if(cron.data && cron.data.cron){
+            let times = cron.data.cron[0].split(":")
+            if (times[0] === "*"){
+                document.getElementById("cronMessage").innerText = `O cron será executado a cada ${times[1]} minutos.`;
+            }else {
+                document.getElementById("cronMessage").innerText = `O cron será executado a cada ${times[0]}h:${times[1]} minutos.`;
+            }
+        }
+
+
         const resultados = await axios.get('/resultados');
-        
-        // Selecionando o elemento onde os resultados serão listados
         const resultadosList = document.getElementById("resultadosList");
-        
-        // Limpa a lista existente para evitar duplicação
         resultadosList.innerHTML = "";
         
-        // Verifica se a resposta contém dados
+
         if (resultados.data && resultados.data.resultados) {
-            // Para cada arquivo, cria um item de lista
             resultados.data.resultados.forEach(file => {
                 const li = document.createElement("li");
                 li.className = "list-group-item d-flex justify-content-between align-items-center";
-                
-                // Criando o texto do item de lista
+            
                 const span = document.createElement("span");
                 span.textContent = file;
 
-                // Criando o botão de download
                 const downloadBtn = document.createElement("button");
                 downloadBtn.className = "btn btn-sm btn-primary";
                 downloadBtn.textContent = "📥 Baixar";
-                downloadBtn.onclick = () => downloadFile(file); // Chamando a função de download
+                downloadBtn.onclick = () => downloadFile(file);
                 
-                // Adicionando os elementos ao item de lista
                 li.appendChild(span);
                 li.appendChild(downloadBtn);
-                
-                // Adicionando o item à lista
                 resultadosList.appendChild(li);
             });
         } else {
@@ -155,7 +189,6 @@
         }
 
         function downloadFile(file) {
-            // Redireciona para a rota de download do Flask
             window.location.href = `/download/${file}`;
         }
 
@@ -195,30 +228,77 @@
             loadData();
         }
 
-        async function setCronJob() {
-            const date = document.getElementById("datePicker").value;
-            const interval = document.getElementById("interval").value;
-            if (!date || !interval) return alert("Selecione a data/hora e o intervalo!");
 
-            // Enviar os dados para o backend para configurar o cron
-            await axios.post('/set-cron', { date, interval });
-            alert("Cron configurado com sucesso!");
+        let selectedMinute = null;
+
+        function updateCronMessage() {
+            let hour = document.getElementById("cronHour").value;
+
+            if (selectedMinute === null) {
+                document.getElementById("cronMessage").innerText = "Por favor, selecione o horário do cron.";
+            } else if (selectedMinute !== "*" && hour === "*") {
+                document.getElementById("cronMessage").innerText = `O cron será executado a cada ${selectedMinute} minutos.`;
+            }
         }
 
-        async function setCronJob() {
-            const time = document.getElementById("timePicker").value;
-            if (!time) return alert("Selecione a hora e minutos!");
 
-            // Enviar os dados para o backend para configurar o cron
-            await axios.post('/set-cron', { time });
-            alert("Cron configurado com sucesso!");
-            // Fechar o modal após definir o cron
+        document.querySelectorAll('.minute-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                let minuteValue = this.getAttribute('data-minute');
+
+                if (minuteValue === "*") {
+                    selectedMinute = "*";
+                    document.querySelectorAll('.minute-btn').forEach(b => {
+                        b.classList.remove('btn-primary', 'btn-danger');
+                        b.classList.add('btn-outline-primary');
+                    });
+                    this.classList.remove('btn-outline-danger');
+                    this.classList.add('btn-danger');
+                } else {
+                    document.querySelector('.minute-btn[data-minute="*"]').classList.remove('btn-danger');
+                    document.querySelector('.minute-btn[data-minute="*"]').classList.add('btn-outline-danger');
+                    selectedMinute = minuteValue;
+
+                    document.querySelectorAll('.minute-btn').forEach(b => {
+                        if (b.getAttribute('data-minute') !== "*") {
+                            b.classList.remove('btn-primary');
+                            b.classList.add('btn-outline-primary');
+                        }
+                    });
+
+                    this.classList.remove('btn-outline-primary');
+                    this.classList.add('btn-primary');
+                }
+
+                updateCronMessage();
+            });
+        });
+
+        async function setCronJob() {
+            let hour = document.getElementById("cronHour").value;
+            let cronTime = `${hour}:${selectedMinute}`;
+            try {
+                await axios.post('/set-cron', { time: cronTime });
+                alert("Cron configurado com sucesso para: " + cronTime);
+            } catch (error) {
+                alert("Erro ao configurar o cron!");
+                console.error(error);
+            }
+        }
+
+        document.getElementById("saveCron").addEventListener("click", function() {
+            document.getElementById("saveCron").style.color = 'white';
             const modal = bootstrap.Modal.getInstance(document.getElementById('datetimeModal'));
             modal.hide();
-        }
+        });
+
+
 
         loadData();
-    </script>
+
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 </body>
 </html> 
