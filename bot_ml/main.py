@@ -35,7 +35,6 @@ class CrawlerRunnerProcess(Process):
 
 def run_spider(search_query):
     try:
-        print("++++++++++++++++++++++++++ ", search_query)
         crawler = CrawlerRunnerProcess(DiscosSpider, search_query)
         crawler.start()
         # crawler.join()
@@ -52,6 +51,8 @@ def job_function():
     project_root = get_project_root()
     resource_path = os.path.join(project_root, "resource")
     output_path = os.path.join(project_root, "output")
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
     csv_file_path = os.path.join(resource_path, "input.csv")
 
     processos = []
@@ -76,16 +77,3 @@ def job_function():
         print("⚠ Nenhum CSV encontrado para conversão.")
 
     print("✅ Processo finalizado!")
-
-if __name__ == '__main__':
-    os.environ['TZ'] = 'America/Sao_Paulo'    
-    configure_logging()
-    scheduler = BlockingScheduler(timezone="America/Sao_Paulo")
-    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat',  hour='16-17', minute='5,15,25,35,45,55', timezone="America/Sao_Paulo")
-    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat', hour='21-23,0', minute='5,15,25,35,45,55', timezone="America/Sao_Paulo")
-    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat', hour='21-23,0', minute='*', timezone="America/Sao_Paulo")
-    # scheduler.add_job(job_function, 'cron', day_of_week='mon-sat', hour=23, minute=47, timezone="America/Sao_Paulo")
-    scheduler.add_job(job_function, 'cron', hour=23, minute=49, timezone="America/Sao_Paulo")
-
-
-    scheduler.start()

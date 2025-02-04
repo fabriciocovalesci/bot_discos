@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
+    <style>
+        .toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1050; 
+}
+
+    </style>
+
 </head>
 <body class="bg-light">
 
@@ -17,13 +27,22 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    <li class="nav-item me-2">
+                        <a class="btn btn-warning" onclick="showDeleteCacheModal()">
+                            <i class="fas fa-trash-alt"></i> Limpar Cache
+                        </a>
+                    </li>
                     <li class="nav-item">
-                        <a class="btn btn-danger" href="/logout">Sair</a>
+                        <a class="btn btn-danger" href="/logout">
+                            <i class="fas fa-sign-out-alt"></i> Sair
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
+    
+    
 
     <div class="container mt-5">
         <h2 class="mb-4 text-center">🎶 Controle do Bot de Discos 🎶</h2>
@@ -97,7 +116,7 @@
                     <div class="d-flex flex-wrap gap-2" id="minuteContainer">
                         <button type="button" class="btn btn-outline-danger minute-btn" data-minute="*">Todos</button>
                         <script>
-                            for (let m = 5; m < 60; m += 5) {  // Inicia a partir de 5 minutos
+                            for (let m = 5; m < 60; m += 5) { 
                                 let minute = m.toString().padStart(2, '0');
                                 document.write(`
                                     <button type="button" class="btn btn-outline-primary minute-btn" data-minute="${minute}">
@@ -115,6 +134,57 @@
             </div>
         </div>
     </div>
+
+
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    Tem certeza que deseja excluir o arquivo <strong id="fileToDelete"></strong>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteFileXLSX()" id="confirmDeleteBtn">Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="confirmDeleteCacheModal" tabindex="-1" aria-labelledby="confirmDeleteCacheModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <strong>Tem certeza que deseja excluir todos links já pesquisados ?</strong>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="clearCache()" id="confirmDeleteBtn">Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="toast-container">
+        <div id="toastMessageContainer" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <span id="toastMessage"></span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    
 
 
     <script>
@@ -138,26 +208,47 @@
         
 
         if (resultados.data && resultados.data.resultados) {
-            resultados.data.resultados.forEach(file => {
+            function parseDateTime(fileName) {
+                const match = fileName.match(/(\d{2})-(\d{2})-(\d{4})_(\d{2})-(\d{2})/);
+                if (match) {
+                    const [_, day, month, year, hour, minute] = match;
+                    return new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
+                }
+                return new Date(0); 
+            }
+
+            const sortedFiles = resultados.data.resultados.sort((a, b) => parseDateTime(b) - parseDateTime(a));
+
+            sortedFiles.forEach(file => {
                 const li = document.createElement("li");
                 li.className = "list-group-item d-flex justify-content-between align-items-center";
-            
+
                 const span = document.createElement("span");
                 span.textContent = file;
+
+                const buttonContainer = document.createElement("div");
+                buttonContainer.className = "d-flex gap-2";
 
                 const downloadBtn = document.createElement("button");
                 downloadBtn.className = "btn btn-sm btn-primary";
                 downloadBtn.textContent = "📥 Baixar";
                 downloadBtn.onclick = () => downloadFile(file);
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.className = "btn btn-sm btn-danger";
+                deleteBtn.textContent = "🗑️ Deletar";
+                deleteBtn.onclick = () => showDeleteModal(file, li);
+
+                buttonContainer.appendChild(downloadBtn);
+                buttonContainer.appendChild(deleteBtn);
                 
                 li.appendChild(span);
-                li.appendChild(downloadBtn);
+                li.appendChild(buttonContainer);
                 resultadosList.appendChild(li);
             });
         } else {
             resultadosList.innerHTML = "<li class='list-group-item'>Nenhum resultado encontrado</li>";
         }
-
 
             const inputRes = await axios.get('/input');
             document.getElementById("inputList").innerHTML = inputRes.data.input.map(item =>
@@ -228,6 +319,56 @@
             loadData();
         }
 
+        async function deleteFileXLSX() {
+            const file_name = document.getElementById("fileToDelete").textContent;
+            if (!file_name) {
+                alert("Por favor, selecione um arquivo para deletar.");
+                return;
+            }
+            
+            try {
+                const response = await axios.delete('/delete-file-xlsx', {
+                    data: { file_name }
+                });
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+                modal.hide();
+
+                document.getElementById("toastMessage").textContent = response.data.message
+                const toastElement = document.querySelector('.toast');
+                const toastInstance = new bootstrap.Toast(toastElement);
+                toastInstance.show();
+                loadData();
+            } catch (error) {
+                console.error("Erro ao deletar arquivo:", error);
+                alert(error.response?.data?.error || "Erro ao deletar o arquivo.");
+            }
+        }
+
+
+        
+        async function clearCache() {            
+            try {
+                const response = await axios.delete('/clear-cache')
+                document.getElementById("toastMessage").textContent = response.data.message
+                const modalElement = document.getElementById('confirmDeleteCacheModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+
+                const toastElement = document.querySelector('.toast');
+                const toastInstance = new bootstrap.Toast(toastElement);
+                toastInstance.show();
+
+                loadData();
+            } catch (error) {
+                console.error("Erro ao deletar arquivo:", error);
+                alert(error.response?.data?.error || "Erro ao deletar o arquivo.");
+            }
+        }
+
+
 
         let selectedMinute = null;
 
@@ -276,6 +417,9 @@
 
         async function setCronJob() {
             let hour = document.getElementById("cronHour").value;
+            if(hour === "*"){
+                selectedMinute = `*${selectedMinute}`;
+            }
             let cronTime = `${hour}:${selectedMinute}`;
             try {
                 await axios.post('/set-cron', { time: cronTime });
@@ -292,13 +436,33 @@
             modal.hide();
         });
 
+        let fileToDelete = "";
+        let listItemToDelete = null;
 
+        function showDeleteModal(file, listItem) {
+            fileToDelete = file;
+            listItemToDelete = listItem;
+
+            document.getElementById("fileToDelete").textContent = file;
+
+            const deleteModal = new bootstrap.Modal(document.getElementById("confirmDeleteModal"));
+            deleteModal.show();
+        }
+
+
+        function showDeleteCacheModal() {
+            const deleteModal = new bootstrap.Modal(document.getElementById("confirmDeleteCacheModal"));
+            deleteModal.show();
+        }
+
+        
 
         loadData();
 
         </script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 
 </body>
 </html> 

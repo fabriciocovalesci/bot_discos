@@ -17,6 +17,10 @@ def send_email(file_name, file_path):
         {
             "name": "Ailton",
             "email": "ailton.staniasky@gmail.com",
+        },
+        {
+            "name": "Fabricio",
+            "email": "fabcovalesci@gmail.com",
         }
     ]
 
