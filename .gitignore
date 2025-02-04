@@ -11,6 +11,14 @@
 # Icon must end with two \r
 Icon
 
+exel/
+resource/
+output/
+ja_coletados.csv
+proibidos.csv
+user.csv
+cron.csv
+
 # Thumbnails
 ._*
 
