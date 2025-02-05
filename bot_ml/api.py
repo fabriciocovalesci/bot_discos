@@ -12,6 +12,12 @@ from main import run_spider, job_function
 from utils import get_project_root
 from scrapy.utils.log import configure_logging
 from apscheduler.schedulers.background import BackgroundScheduler 
+from apscheduler.jobstores.base import JobLookupError
+import logging
+
+logging.basicConfig()
+logging.getLogger('apscheduler').setLevel(logging.DEBUG)
+
 
 app = Flask(__name__,  template_folder="templates")
 app.secret_key = 'sua_chave_secreta_aqui'  
@@ -25,6 +31,7 @@ scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
 
 app.permanent_session_lifetime = timedelta(hours=24)
 
+job_id = "discos_job_id"
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -189,25 +196,54 @@ def set_cron():
             with open(cron_file, 'w', encoding='utf-8') as file:
                 file.write(cron_time + "\n")
 
-            scheduler.remove_all_jobs()
-
             try:
                 hour, minute = cron_time.split(":")
                 print(f"[LOG] Definindo cron para Hora: {hour}, Minuto: {minute}")
             except ValueError:
                 return jsonify({"error": "Formato inválido. Use HH:MM ou *:MM"}), 400
+            
 
-            if hour == "*" and minute.startswith("*"):
-                interval = int(minute[1:]) 
-                scheduler.add_job(job_function, 'cron', minute=f"*/{interval}", timezone="America/Sao_Paulo")
+            try:
+                scheduler.remove_job(job_id)
+            except JobLookupError:
+                print(f"[LOG] Nenhum job encontrado com ID {job_id}, criando um novo.")
+
+            if hour == "*":
+                scheduler.add_job(job_function, 'interval', minutes=int(minute), timezone="America/Sao_Paulo", id=job_id, replace_existing=True)
             else:
-                scheduler.add_job(job_function, 'cron', hour=int(hour), minute=int(minute), timezone="America/Sao_Paulo")
-
+                scheduler.add_job(job_function, 'cron', hour=int(hour), minute=int(minute), timezone="America/Sao_Paulo", id=job_id, replace_existing=True)
+            print(f"Jobs ativos: {scheduler.get_jobs()}")
             return jsonify({"message": f"Cron configurado para {cron_time}"}), 201
 
     return jsonify({"message": "Falha na configuração do cron."}), 400
 
 
+
+def initialize_cron():
+    if not os.path.exists(cron_file):
+        with open(cron_file, 'w', encoding='utf-8') as file:
+            file.write('*:25\n')
+    
+    with open(cron_file, 'r', encoding='utf-8') as file:
+        cron_time = file.read().strip()
+
+    print(f"[LOG] Inicializando cron com valor: {cron_time}")
+
+    if cron_time:
+        try:
+            scheduler.remove_job(job_id)
+        except JobLookupError:
+            print(f"[LOG] Nenhum job encontrado com ID {job_id}, criando um novo.")
+        try:
+            hour, minutes = cron_time.split(":")
+            print(f"[LOG] Hora: {hour}, Minuto: {minutes}")
+            if hour == "*":
+                scheduler.add_job(job_function, 'interval', minutes=int(minutes), timezone="America/Sao_Paulo", id=job_id, replace_existing=True)
+            else:
+                scheduler.add_job(job_function, 'cron', hour=int(hour), minute=int(minutes), timezone="America/Sao_Paulo", id=job_id, replace_existing=True)
+        except ValueError:
+            print("[ERRO] Formato de cron inválido, ignorando...")
+        print(f"Jobs ativos: {scheduler.get_jobs()}")
 
 
 
@@ -227,6 +263,7 @@ def manage_delete_xlsx():
         return jsonify({"error": f"Arquivo '{file_name}' não encontrado"}), 404
 
 
+
 @app.route('/clear-cache', methods=['DELETE'])
 def manage_delete_cache():
     file_cache_path = os.path.join(get_project_root(), "ja_coletados.csv")
@@ -240,29 +277,6 @@ def manage_delete_cache():
     except Exception as e:
         return jsonify({"error": f"Erro ao limpar o cache: {str(e)}"}), 500
 
-
-def initialize_cron():
-    if not os.path.exists(cron_file):
-        with open(cron_file, 'w', encoding='utf-8') as file:
-            file.write('*:25\n')
-    
-    with open(cron_file, 'r', encoding='utf-8') as file:
-        cron_time = file.read().strip()
-
-    print(f"[LOG] Inicializando cron com valor: {cron_time}")
-
-    if cron_time:
-        scheduler.remove_all_jobs()
-        try:
-            hour, minute = cron_time.split(":")
-            print(f"[LOG] Hora: {hour}, Minuto: {minute}")
-            if hour == "*" and minute.startswith("*"):
-                interval = int(minute[1:])
-                scheduler.add_job(job_function, 'cron', minute=f"*/{interval}", timezone="America/Sao_Paulo")
-            else:
-                scheduler.add_job(job_function, 'cron', hour=int(hour), minute=int(minute), timezone="America/Sao_Paulo")
-        except ValueError:
-            print("[ERRO] Formato de cron inválido, ignorando...")
 
 
 def start_scheduler():

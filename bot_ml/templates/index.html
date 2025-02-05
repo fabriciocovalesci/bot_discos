@@ -417,9 +417,9 @@
 
         async function setCronJob() {
             let hour = document.getElementById("cronHour").value;
-            if(hour === "*"){
-                selectedMinute = `*${selectedMinute}`;
-            }
+            // if(hour === "*"){
+            //     selectedMinute = `*${selectedMinute}`;
+            // }
             let cronTime = `${hour}:${selectedMinute}`;
             try {
                 await axios.post('/set-cron', { time: cronTime });

@@ -17,7 +17,9 @@ output/
 ja_coletados.csv
 proibidos.csv
 user.csv
+ja_coletados.csv
 cron.csv
+
 
 # Thumbnails
 ._*
