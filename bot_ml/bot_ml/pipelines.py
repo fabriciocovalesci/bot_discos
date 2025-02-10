@@ -81,7 +81,7 @@ class BotMlPipeline:
                     cell.value = value
         path_save_file = os.path.join(get_project_root(), "exel", output_file)
         wb.save(path_save_file)
-        send_email(output_file, path_save_file)
+        # send_email(output_file, path_save_file)
         print(f"✅ Arquivo Excel salvo em: {path_save_file}")
         print(f"Resultados salvos em {path_save_file}")
         path_output_files = os.path.join(get_project_root(), "output")

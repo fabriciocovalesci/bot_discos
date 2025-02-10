@@ -12,7 +12,7 @@ class DiscosSpider(scrapy.Spider):
 
     def __init__(self, search_query, *args, **kwargs):
         super(DiscosSpider, self).__init__(*args, **kwargs)
-        self.search_query = search_query  # Exemplo: "Rubinho e Mauro Assumpção"
+        self.search_query = search_query
         self.start_urls_list_ml = "https://lista.mercadolivre.com.br"
         self.url_product = "https://produto.mercadolivre.com.br"
         data_hora = datetime.now().strftime("%d-%m-%Y_%H-%M")
@@ -67,9 +67,10 @@ class DiscosSpider(scrapy.Spider):
                     self.logger.info(f"❌ Ignorado (título não contém termo de busca): {title}")
                     continue
 
-                if processed_link in links_ja_coletados:
-                    self.logger.info(f"🔄 Ignorado (já coletado): {processed_link}")
+                if self.buscar_nome_no_csv(title.strip()) or self.buscar_nome_no_csv(processed_link):
+                    self.logger.info(f"🔄 Ignorado (já coletado): {processed_link} - {title}")
                     continue
+
 
                 writer_resultados.writerow([
                     title.strip(),
@@ -79,17 +80,14 @@ class DiscosSpider(scrapy.Spider):
                     produto_id
                 ])
 
-                # yield {
-                #     'titulo': title.strip(),
-                #     'valor': f'R$ {price.strip()}' if price else None,
-                #     'link': processed_link,
-                #     'termo': self.search_query,
-                #     'produto_id': produto_id
-                # }
-
+                writer_coletados.writerow([title.strip()])
                 writer_coletados.writerow([processed_link])
                 self.logger.info(f"✅ Adicionado: {title}")
 
+            pagination_links = response.xpath('//nav[@aria-label="Paginação"]//a/@href').getall()
+
+            for link in pagination_links:
+                yield response.follow(link, self.parse)
 
 
     def carregar_palavras_proibidas(self):
@@ -114,3 +112,13 @@ class DiscosSpider(scrapy.Spider):
             filtered_link = link.split('#')[0]
             return filtered_link
         return None
+
+
+    def buscar_nome_no_csv(self, nome):
+        """Retorna True se encontrar o nome no CSV, senão retorna False."""
+        with open(self.ja_coletados_csv, mode="r", encoding="utf-8") as file:
+            reader = csv.reader(file)
+            for linha in reader:
+                if linha and nome.strip().lower() == linha[0].strip().lower():
+                    return True
+        return False
