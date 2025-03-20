@@ -17,3 +17,5 @@ if buscar_nome_no_csv(nome_procurado, arquivo):
     print("✅ Nome encontrado no CSV!")
 else:
     print("❌ Nome NÃO encontrado no CSV.")
+
+# teste
